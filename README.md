@@ -18,7 +18,7 @@
 - 上传过的内容（hash）永久记录，避免重复上传及误下载  
 
 使用说明：  
-1. 安装 [Shizuku](https://github.com/RikkaApps/Shizuku) 和 [AutoJs6](https://github.com/SuperMonster003/AutoJs6)，并对AutoJs6授权和开启剪贴板、悬浮窗、自启动、电池优化不受限等权限
+1. 安装 [Shizuku](https://github.com/RikkaApps/Shizuku) 和 [AutoJs6](https://github.com/SuperMonster003/AutoJs6)，并对AutoJs6授权和开启所有文件访问权限、剪贴板、悬浮窗、自启动、电池优化不受限等权限
 2. 在 AutoJs6 中安装本脚本，并配置 User Config
 3. 运行脚本，即可实现无感同步剪贴板、文件、截图、通知等功能
 4. 需要搭配 SyncClipboard 服务器使用，服务器搭建请参考 SyncClipboard 项目 README.md  
