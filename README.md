@@ -8,7 +8,7 @@
 1. 剪贴板文本同步 - 自动上传/下载文本剪贴板，与 SyncClipboard 服务器保持同步
 2. 文件同步 - 监控 Upload 目录，新文件自动上传后删除，同步下载的文件在 Download 目录，这两个目录默认在 /sdcard/SyncClipboard/中可以找到（可关闭 enableFileSync）
 3. 截图上传 - 监控截图目录，新截图自动上传（可关闭 enableScreenshotUpload）
-4. 通知上传 - 支持自定义通知上传白名单，例如将微信/短信等通知内容自动上传为剪贴板（可关闭 enableNotificationUploadDefault）
+4. 通知上传 - 支持自定义通知上传白名单，例如将微信/短信等通知内容自动上传为剪贴板（可关闭 notificationUploadDefaultOn）
 5. 剪贴板文件同步 - 监听剪贴板，检测到复制文件和 content URI 时自动上传（可关闭 enableClipboardFileSync）
 
 设计说明：  
