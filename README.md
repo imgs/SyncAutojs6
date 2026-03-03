@@ -2,7 +2,7 @@
 
 此脚本由 SyncClipboard 项目 script 目录下的 SyncAutoxJs.js 文件衍生而来  
 已实现无感同步剪贴板、文件、截图、通知等功能  
-支持 Android 16 等系统，需配合 Shizuku 和 AutoJs6 使用，无需 Root 权限  
+支持 Android 16 等系统，需配合 Shizuku（部分设备无需，自行测试）和 AutoJs6 使用，无需 Root 权限  
 
 功能说明：  
 1. 剪贴板文本同步 - 自动上传/下载文本剪贴板，与 SyncClipboard 服务器保持同步
