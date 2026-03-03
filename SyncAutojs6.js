@@ -9,7 +9,7 @@
  * 1. 剪贴板文本同步 - 自动上传/下载文本剪贴板，与 SyncClipboard 服务器保持同步
  * 2. 文件同步 - 监控 Upload 目录，新文件自动上传后删除，同步下载的文件在 Download 目录，这两个目录默认在 /sdcard/SyncClipboard/中可以找到（可关闭 enableFileSync）
  * 3. 截图上传 - 监控截图目录，新截图自动上传（可关闭 enableScreenshotUpload）
- * 4. 通知上传 - 支持自定义通知上传白名单，例如将微信/短信等通知内容自动上传为剪贴板（可关闭 enableNotificationUploadDefault）
+ * 4. 通知上传 - 支持自定义通知上传白名单，例如将微信/短信等通知内容自动上传为剪贴板（可关闭 notificationUploadDefaultOn）
  * 5. 剪贴板文件同步 - 监听剪贴板，检测到复制文件和 content URI 时自动上传（可关闭 enableClipboardFileSync）
  *
  * 设计说明：
@@ -47,7 +47,7 @@ const intervalTime = 3 * 1000                           // 同步间隔时间，
 const showToastNotification = true // 显示 Toast 通知，默认开启
 const toastLang = 'zh'  // 'zh' 中文 | 'en' English
 const syncWhenScreenOff = false  // true: 熄屏也同步 | false: 仅亮屏时同步
-const enableNotificationUploadDefault = true // 通知上传功能，默认开启
+const notificationUploadDefaultOn = true // 通知上传默认开启
 const notificationPackageWhitelist = [
     'com.tencent.mm',                    // WeChat
     'com.android.mms',                   // 短信
@@ -81,7 +81,7 @@ const apiUrl = urlWithoutSlash + '/SyncClipboard.json'
 const fileApiBaseUrl = urlWithoutSlash + '/file/'
 
 const settingsStorage = storages.create('SyncClipboardSettings')
-let enableNotificationUpload = settingsStorage.get('enableNotificationUpload', enableNotificationUploadDefault)
+let notificationUploadOn = settingsStorage.get('enableNotificationUpload', notificationUploadDefaultOn)
 
 let running = false
 let remoteCache;
@@ -541,7 +541,7 @@ events.onNotification(notification => {
 	const text = notification.getText();
 	const pkg = notification.getPackageName && notification.getPackageName();
 	const allowed = pkg && notificationPackageWhitelist.indexOf(String(pkg)) >= 0;
-	if (enableNotificationUpload && allowed && text != null && text.length != 0 && text != lastUploadedNotification && text != lastDownloadedText) {
+	if (notificationUploadOn && allowed && text != null && text.length != 0 && text != lastUploadedNotification && text != lastDownloadedText) {
 		uploadNotificationContent(text);
 	}
 });
@@ -550,10 +550,10 @@ events.onNotification(notification => {
 // 禁用：运行此脚本，然后点击对话框切换设置。
 function toggleNotificationUploadSetting() {
 	try {
-		let current = settingsStorage.get('enableNotificationUpload', enableNotificationUploadDefault)
+		let current = settingsStorage.get('enableNotificationUpload', notificationUploadDefaultOn)
 		current = !current
 		settingsStorage.put('enableNotificationUpload', current)
-		enableNotificationUpload = current
+		notificationUploadOn = current
 		console.log('Notification upload ' + (current ? 'enabled' : 'disabled'))
 	} catch (e) {
 		console.error('Failed to toggle setting: ' + e)
