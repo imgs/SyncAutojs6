@@ -20,11 +20,11 @@
  * - 上传过的内容（hash）永久记录，避免重复上传及误下载
  *
  * 使用说明：
- * 1. 安装 AutoJs6（https://github.com/SuperMonster003/AutoJs6），并对AutoJs6授权和开启所有文件访问权限、剪贴板、悬浮窗、自启动、电池优化不受限等权限
+ * 1. 安装 [AutoJs6](https://github.com/SuperMonster003/AutoJs6)，并对AutoJs6授权和开启所有文件访问权限、剪贴板、悬浮窗、自启动、电池优化不受限等权限
  * 2. 在 AutoJs6 中安装本脚本，并配置 User Config
  * 3. 运行脚本，即可实现无感同步剪贴板、文件、截图、通知等功能
  * 4. 需要搭配 SyncClipboard 服务器使用，服务器搭建请参考 SyncClipboard 项目 README.md
- * 5. 息屏同步可能需要用到改版 Shizuku（https://github.com/thedjchi/Shizuku），如有root权限可尝试原版 Shizuku（https://github.com/RikkaApps/Shizuku），请自行安装测试
+ * 5. 息屏同步可能需要用到改版 [Shizuku](https://github.com/thedjchi/Shizuku)，如有root权限可尝试原版 [Shizuku](https://github.com/RikkaApps/Shizuku)，请自行安装测试
  * 
  * 测试环境：
  * Android 16（小米 HyperOS 3.0）和 HarmonyOS 3.0（华为平板）系统中测试正常，其他设备/系统未测试
@@ -42,16 +42,16 @@
 const url = 'https://192.168.1.5:5033' // 服务器地址，默认 https://192.168.1.5:5033
 const username = 'admin' // 用户名，默认 admin
 const token = 'admin' // 令牌，默认 admin
-const intervalTime = 3 * 1000                           // 同步间隔时间，默认 3 秒
+const intervalTime = 3 * 1000                           // 自动同步间隔时间，默认 3 秒
 const showToastNotification = true // 显示 Toast 通知，默认开启
-const toastLang = 'zh'  // 'zh' 中文 | 'en' English
-const syncWhenScreenOff = false  // true: 熄屏也同步 | false: 仅亮屏时同步
-const notificationUploadDefaultOn = true // 通知上传默认开启
+const toastLang = 'zh'  // 提示语言，默认 'zh' 中文，可选 'en' English
+const syncWhenScreenOff = false  // 熄屏时是否同步，默认 false: 仅亮屏时同步
+const notificationUploadDefaultOn = true // 指定应用通知内容自动上传功能，默认开启
 const notificationPackageWhitelist = [
     // 'com.tencent.mm',                    // WeChat
-    'com.android.mms',                   // 短信
-    'com.google.android.apps.messaging', // Google Messages
-] // 通知上传白名单，默认包含 WeChat、短信、Google Messages
+    'com.android.mms',                   // 短信应用
+    'com.google.android.apps.messaging', // Google Messages 应用
+] // 指定应用通知上传白名单，默认包含 WeChat、短信、Google Messages 应用
 // File sync settings
 const enableFileSync = true // 文件同步功能，默认开启
 const uploadDir = '/sdcard/SyncClipboard/Upload/' // 文件上传目录，默认 /sdcard/SyncClipboard/Upload/
