@@ -27,7 +27,7 @@
 测试环境：
 Android 16（小米 HyperOS 3.0）和 HarmonyOS 3.0（华为平板）系统中测试正常，其他设备/系统未测试
 
-特别感谢：
+特别感谢：  
 SyncClipboard 作者：Jeric-X，项目采用 MIT License  
 项目地址：https://github.com/Jeric-X/SyncClipboard
 
