@@ -39,9 +39,9 @@
  */
 
 // START User Config
-const url = 'https://192.168.1.5:5033' // 服务器地址，示例：https://192.168.1.5:5033
-const username = 'admin' // 用户名，默认 admin
-const token = 'admin' // 令牌，默认 admin
+const url = 'https://heslaheim-herring.hf.space' // 服务器地址，示例：https://192.168.1.5:5033
+const username = 'LAFOREY' // 用户名，默认 admin
+const token = 'Lilysukidesu26' // 令牌，默认 admin
 const intervalTime = 3 * 1000                           // 自动同步间隔时间，默认 3 秒
 const showToastNotification = true // 显示 Toast 通知，默认开启
 const toastLang = 'zh'  // 提示语言，默认 'zh' 中文，可选 'en' English
@@ -52,6 +52,10 @@ const notificationPackageWhitelist = [
     'com.android.mms',                   // 短信应用
     'com.google.android.apps.messaging', // Google Messages 应用
 ] // 指定应用通知上传白名单，默认包含 WeChat、短信、Google Messages 应用
+const pauseSyncApps = [
+     'com.eusoft.eudic',  // 欧路词典包
+    // 'com.youdao.dict',   // 网易有道词典
+] // 指定当哪些应用在前台时完全暂停同步（请自行填入你所用的查词软件的包名）
 // File sync settings
 const enableFileSync = true // 文件同步功能，默认开启
 const uploadDir = '/sdcard/SyncClipboard/Upload/' // 文件上传目录，默认 /sdcard/SyncClipboard/Upload/
@@ -295,6 +299,15 @@ function loop() {
         return
     if (running)
         return
+
+    try {
+        // 如果查词软件在前台，直接停止同步（需在顶部的 pauseSyncApps 填入包名）
+        let pkg = typeof currentPackage !== 'undefined' ? currentPackage() : null;
+        if (pkg && typeof pauseSyncApps !== 'undefined' && pauseSyncApps.indexOf(String(pkg)) >= 0) {
+            return;
+        }
+    } catch (e) {}
+
     running = true
 
     ensureDirectories()
