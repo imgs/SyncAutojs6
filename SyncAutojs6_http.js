@@ -1,5 +1,5 @@
 /**
- * SyncClipboard Android 自动同步脚本 v3.1.1-2026.03.15 (SyncAutojs6.js)
+ * SyncClipboard Android 自动同步脚本 v3.1.2-2026.03.27 (SyncAutojs6.js)
  * Copyright (c) 2026 CGQA (https://github.com/imgs/SyncAutojs6). MIT License.
  * 
  * 此脚本由 SyncClipboard 项目 script 目录下的 SyncAutoxJs.js 文件衍生而来
@@ -70,7 +70,6 @@ const enableGroupUpload = true // Group 上传：Upload 目录下的子文件夹
 // END User Config
 
 // 使用内置 http 模块替代 axios，兼容 AutoJs6 6.7.0+ 且无需额外依赖
-// 采用同步方式（无 callback）确保上传/下载可靠执行
 function httpRequest(options) {
     const method = (options.method || 'GET').toUpperCase();
     const opts = {
@@ -117,7 +116,11 @@ const fileApiBaseUrl = urlWithoutSlash + '/file/'
 const settingsStorage = storages.create('SyncClipboardSettings')
 let notificationUploadOn = settingsStorage.get('enableNotificationUpload', notificationUploadDefaultOn)
 
-let running = false
+let networkRunning = false
+let pendingRemoteText = null
+let lastCheckedLocalClip = ""
+try { lastCheckedLocalClip = getClip() } catch(e) {}
+
 let remoteCache;
 let uploadedFileThisCycle = false
 let lastUploadedClipboard;
@@ -147,6 +150,22 @@ let uploadingNow = new Set()
 let screenshotDirsChecked = false
 // 校验后选中的唯一有效截图目录，避免重复轮询多个等价路径
 var activeScreenshotDir = null
+
+// 检测底层软键盘窗口
+function isKeyboardVisible() {
+    try {
+        var windows = auto.windows;
+        if (windows) {
+            for (var i = 0; i < windows.length; i++) {
+                var w = windows[i];
+                if (w && w.getType() === 2) return true;
+            }
+        }
+        return false;
+    } catch (e) {
+        return false;
+    }
+}
 
 function getActiveScreenshotDir() {
     if (activeScreenshotDir != null) {
@@ -290,41 +309,74 @@ function hashEqual(a, b) {
     return a && b && String(a).toUpperCase() === String(b).toUpperCase()
 }
 
-function loop() {
-    if (!syncWhenScreenOff && !device.isScreenOn())
-        return
-    if (running)
-        return
-    running = true
+// --- 替换 loop() ---
+setInterval(function localFastLoop() {
+    if (!syncWhenScreenOff && !device.isScreenOn()) return;
+    if (networkRunning) return; 
+
+    // 只要系统检测到底层键盘存在，立刻暂停读写保护焦点
+    if (isKeyboardVisible()) return;
+
+    var currentClip = null;
+    try { currentClip = getClip(); } catch(e) {}
+
+    // 本地内容有更新，立刻上传
+    if (currentClip && currentClip !== lastCheckedLocalClip && currentClip !== remoteCache && currentClip !== lastUploadedClipboard && currentClip !== lastDownloadedText) {
+        lastCheckedLocalClip = currentClip;
+        
+        var p = tryUploadClipboardPath(currentClip);
+        if (p) {
+            p.catch(function(e){ console.error(e) });
+        } else {
+            tryUploadClipboardUri().then(function() {
+                upload(currentClip);
+            }).catch(function(e){ console.error(e) });
+        }
+    }
+
+    // 处理网络排队传来的剪切板内容
+    if (pendingRemoteText !== null) {
+        try {
+            setClip(pendingRemoteText);
+            lastCheckedLocalClip = pendingRemoteText;
+            remoteCache = pendingRemoteText;
+            lastDownloadedText = pendingRemoteText;
+            
+            var txtToToast = pendingRemoteText;
+            pendingRemoteText = null; 
+            
+            if (showToastNotification) {
+                let logText = txtToToast.length > 20 ? txtToToast.substring(0, 20) + '...' : txtToToast;
+                toast(T.syncUpdated + logText);
+            }
+        } catch(e) {}
+    }
+}, 800);
+
+// --- 替换 loop() 中的网络与文件处理部分 ---
+function networkLoop() {
+    if (!syncWhenScreenOff && !device.isScreenOn()) return;
+    if (networkRunning) return;
+    networkRunning = true;
 
     ensureDirectories()
     uploadedFileThisCycle = false
     uploadFiles()
-        .then(() => uploadClipboardFile())
-        .then(() => upload())
-        .then(ifContinue => {
-            // 本周期未上传剪贴板且未上传文件时再下载，避免「上传后马上又下载」
-            if (ifContinue && !uploadedFileThisCycle) return download()
+        .then(() => {
+            if (!uploadedFileThisCycle) return download()
         })
-        .then(() => { running = false })
+        .then(() => { networkRunning = false })
         .catch(error => {
-            running = false;
+            networkRunning = false;
             let errMsg = '';
             let source = '';
             try {
                 if (error) {
-                    if (error.source) {
-                        source = error.source;
-                    }
-                    if (error.message) {
-                        errMsg = error.message;
-                    } else if (typeof error === 'string') {
-                        errMsg = error;
-                    } else if (error.stack) {
-                        errMsg = error.stack;
-                    } else {
-                        errMsg = JSON.stringify(error);
-                    }
+                    if (error.source) source = error.source;
+                    if (error.message) errMsg = error.message;
+                    else if (typeof error === 'string') errMsg = error;
+                    else if (error.stack) errMsg = error.stack;
+                    else errMsg = JSON.stringify(error);
                 }
             } catch (e) {
                 errMsg = String(error);
@@ -333,6 +385,7 @@ function loop() {
             if (showToastNotification) toast(T.syncFailed + (errMsg.length > 50 ? errMsg.substring(0, 50) + '...' : errMsg))
         });
 }
+setInterval(networkLoop, intervalTime);
 
 function download() {
     return httpRequest({
@@ -354,30 +407,19 @@ function download() {
                 if (profile.type == 'Text') {
                     var text = null
                     if (profile.hasData === true && profile.dataName) {
-                        // 长文本存储在单独的 .txt 文件中
                         return downloadTextFile(profile.dataName).then(fullText => {
                             if (fullText != null && fullText.length != 0 && fullText != remoteCache && fullText != lastDownloadedText) {
-                                remoteCache = fullText
-                                lastDownloadedText = fullText
-                                lastDownloadedProfileSignature = signature
-                                setClip(fullText)
-                                if (showToastNotification) {
-                                    let logText = fullText.length > 20 ? fullText.substring(0, 20) + "..." : fullText
-                                    toast(T.syncUpdated + logText)
-                                }
+                                // 不直接写入，而是排队等待键盘收起
+                                pendingRemoteText = fullText;
+                                lastDownloadedProfileSignature = signature;
                             }
                         })
                     } else {
                         text = profile.text
                         if (text != null && text.length != 0 && text != remoteCache && text != lastDownloadedText) {
-                            remoteCache = text
-                            lastDownloadedText = text
-                            lastDownloadedProfileSignature = signature
-                            setClip(text)
-                            if (showToastNotification) {
-                                let logText = text.length > 20 ? text.substring(0, 20) + '...' : text
-                                toast(T.syncUpdated + logText)
-                            }
+                            // 排队等待键盘收起
+                            pendingRemoteText = text;
+                            lastDownloadedProfileSignature = signature;
                         }
                     }
                 } else if ((profile.type == 'Image' || profile.type == 'File' || profile.type == 'Group') && profile.dataName) {
@@ -421,16 +463,8 @@ function download() {
         })
 }
 
-// 监听剪贴板：检测到复制文件路径或 content URI 时自动上传
-function uploadClipboardFile() {
-    if (!enableFileSync || !enableClipboardFileSync) return Promise.resolve()
-    var p = tryUploadClipboardPath()
-    if (p) return p
-    return tryUploadClipboardUri()
-}
-
-function tryUploadClipboardPath() {
-    var text = getClip()
+// 接收由 localFastLoop 传入的 text
+function tryUploadClipboardPath(text) {
     if (text == null || text.length === 0) return null
     var path = String(text).trim()
     if (path.indexOf('\n') >= 0) return null
@@ -519,8 +553,8 @@ function tryUploadClipboardUri() {
     }
 }
 
-function upload() {
-    let text = getClip()
+// 接收由 localFastLoop 传入的 text
+function upload(text) {
     if (text == null || text.length === 0) return Promise.resolve(true)
     if (lastUploadedClipboardFile && (text === lastUploadedClipboardFile || text === 'file://' + lastUploadedClipboardFile)) return Promise.resolve(true)
     if (text != remoteCache && text != lastUploadedClipboard) {
@@ -566,8 +600,6 @@ function upload() {
     }
     return Promise.resolve(true);
 }
-
-setInterval(loop, intervalTime)
  
 // 监听通知并自动上传完整通知文本（受设置保护）
 events.observeNotification();
